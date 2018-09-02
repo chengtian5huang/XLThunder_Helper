@@ -7,7 +7,6 @@ Creator: cts
 import ctypes
 
 import c_types
-import special_wnds
 
 __user32lib = ctypes.WinDLL(r"C:\Windows\System32\user32.dll")
 
@@ -26,14 +25,11 @@ def most_wanted_wnd(wanted):
 
 def most_wanted_cursor_pos(wanted):
     wanted_hnd = most_wanted_wnd(wanted)
-    cursor_by_client(wanted_hnd, *wanted.click_pos)
-
-
-def left_click(x, y):
-    pass
+    return cursor_by_client(wanted_hnd, *wanted.click_pos)
 
 
 def cursor_by_client(hnd, x, y):
     apoint = c_types.ScreenPoint()
     apoint.x, apoint.y = x, y
     __user32lib.ClientToScreen(int(hnd), ctypes.byref(apoint))
+    return apoint.x, apoint.y
