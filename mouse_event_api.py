@@ -4,6 +4,7 @@ Created on 2018/9/2
 
 Creator: cts
 """
+import logging
 import math
 import time
 
@@ -18,6 +19,20 @@ WORD = ctypes.c_ushort
 STRUCT = ctypes.Structure
 UNION = ctypes.Union
 
+# logging setup
+book_keeper = logging.getLogger(__name__)
+book_keeper.setLevel(logging.DEBUG)
+console_formatter = logging.Formatter('%(asctime)s||%(name)s > %(levelname)s @line_No.%(lineno)s|| %(message)s',
+                                      datefmt='%H:%M:%S')
+
+write_2_console = logging.StreamHandler()
+write_2_console.setLevel(logging.INFO)
+write_2_console.setFormatter(console_formatter)
+
+book_keeper.addHandler(write_2_console)
+
+
+###
 
 class tagMOUSEINPUT(STRUCT):
     _fields_ = (('dx', LONG),
@@ -110,30 +125,16 @@ def _right_click(x, y):
     send_input(make_mouse_input(XBUTTON1, 0x8019, x, y))
 
 
-"""MOUSE_MOVE_SIGNALS = {
-    "": _simply_move,
-    "l": _left_click,
-    "r": _right_click,
-}
+def _left_drag(x, y):
+    send_input(make_mouse_input(XBUTTON1, 0x8003, x, y))
 
 
-def mouse_move(x, y, extra=None):
-    x, y = normalize_coord(x, y)
-    engagement = MOUSE_MOVE_SIGNALS.get(extra)
-    if engagement is None:
-        raise LookupError("No such move.")
-    else:
-        engagement(x, y)
-
-
-def manual_stop():
-    pass
-
-"""
+def _release_mouse_buttons(x, y):
+    send_input(make_mouse_input(XBUTTON1, 0x0054, x, y))
 
 
 class Commands:
-    def __init__(self, x, y, extra, delay=0.05):
+    def __init__(self, x, y, extra, delay=0):
         self.x, self.y = int(x), int(y)
         self.normalized_x, self.normalized_y = normalize_coord(x, y)
         self.extra = extra
@@ -145,14 +146,16 @@ class MouseController:
         '': _simply_move,
         "l": _left_click,
         "r": _right_click,
+        'L': _left_drag,
+        'free': _release_mouse_buttons,
     }
 
     def __init__(self):
         self.lib = ctypes.WinDLL(r"C:\Windows\System32\user32.dll")
-        self.__continue_zone = 50
-        self.__breakout_tolerance = 1
+        self.__continue_zone = 100
+        self.__breakout_tolerance = 2
         self.__breakout_record = 0
-        self.__commands_group = None
+        self.__commands_completed = 0
         self.__current_command = None
 
     def __command_instructor(self):
@@ -160,9 +163,11 @@ class MouseController:
         engagement(self.__current_command.normalized_x, self.__current_command.normalized_y)
         while not self.__within_boundary():
             self.__breakout_record += 1
+            book_keeper.debug("cursor did not moved as expected!")
             engagement(self.__current_command.normalized_x, self.__current_command.normalized_y)
             if self.__breakout_record > self.__breakout_tolerance:
-                break
+                return
+        self.__commands_completed += 1
 
     def __current_cursor(self):
         from ctype_structures import POINT
@@ -176,11 +181,31 @@ class MouseController:
 
     def __within_boundary(self):
         current_cursor = self.__current_cursor()
-        return self.__distance(*current_cursor, self.__current_command.x,
-                               self.__current_command.y) > self.__continue_zone
+        distance = self.__distance(*current_cursor, self.__current_command.x, self.__current_command.y)
+        in_continue_zone = distance < self.__continue_zone
+
+        book_keeper.debug("actual pos > {actual_pos} vs expected pos > {expected_pos} distance: {_distance:.2f}".format(
+            actual_pos=current_cursor, expected_pos=(self.__current_command.x, self.__current_command.y),
+            _distance=distance))
+        if not in_continue_zone:
+            book_keeper.info(
+                "recorded one breakout: actual pos > {actual_pos} vs expected pos > {expected_pos} distance: {_distance:.2f}".format(
+                    actual_pos=current_cursor, expected_pos=(self.__current_command.x, self.__current_command.y),
+                    _distance=distance))
+
+        return in_continue_zone
 
     def __call__(self, commands):
         for cmd in commands:
+            if self.__breakout_record > self.__breakout_tolerance:
+                book_keeper.warning("Halt! User interrupts for too many times!")
+                return
             self.__current_command = cmd
             self.__command_instructor()
+
+            # maybe need to free all buttons here.
+
             time.sleep(self.__current_command.delay)
+        _release_mouse_buttons(*self.__current_cursor())
+        book_keeper.info(
+            "Successfully Complete {commands_group} Commands!".format(commands_group=self.__commands_completed))

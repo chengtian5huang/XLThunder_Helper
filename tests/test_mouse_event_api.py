@@ -9,7 +9,7 @@ import time
 
 from win_api import __user32lib
 
-from mouse_event_api import mouse_move, Commands, MouseController
+from mouse_event_api import Commands, MouseController
 
 SCREEN_CENTER = __user32lib.GetSystemMetrics(0) / 2, __user32lib.GetSystemMetrics(1) / 2
 
@@ -21,19 +21,16 @@ def circle_coords(a, b, radius, steps=36):
         yield circle_point_x, circle_poine_y
 
 
-def test_clicks():
-    mouse_move(*SCREEN_CENTER, extra="l")
-    mouse_move(*SCREEN_CENTER, extra="r")
-
-
-def test_movement():
-    for x, y in circle_coords(*SCREEN_CENTER, 300):
-        mouse_move(x, y, extra='')
-        time.sleep(0.05)
-
-
 def test_command_controller():
     circle_cmds_group = (Commands(x=circle_x, y=circle_y, extra='') for circle_x, circle_y in
-                         circle_coords(*SCREEN_CENTER, 200, steps=60))
+                         circle_coords(*SCREEN_CENTER, 200, steps=30))
     mc = MouseController()
+    mc(circle_cmds_group)
+
+
+def test_draging_cursor():
+    circle_cmds_group = (Commands(x=circle_x, y=circle_y, extra='L', delay=0.01) for circle_x, circle_y in
+                         circle_coords(*SCREEN_CENTER, 200, steps=180))
+    mc = MouseController()
+    time.sleep(3)
     mc(circle_cmds_group)

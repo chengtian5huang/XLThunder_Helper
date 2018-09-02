@@ -44,7 +44,7 @@ def test_usage():
     import special_wnds
     import ctypes
     from win_api import most_wanted_wnd, __user32lib
-    hnd = most_wanted_wnd(special_wnds.SpeedMeter())
+    hnd = most_wanted_wnd(special_wnds.SpeedMeter)
 
     assert 1 == __user32lib.GetWindowRect(hnd, ctypes.byref(rect))
     assert 150 == rect.right - rect.left == rect.bottom - rect.top
