@@ -26,7 +26,7 @@ console_formatter = logging.Formatter('%(asctime)s||%(name)s > %(levelname)s @li
                                       datefmt='%H:%M:%S')
 
 write_2_console = logging.StreamHandler()
-write_2_console.setLevel(logging.INFO)
+write_2_console.setLevel(logging.DEBUG)
 write_2_console.setFormatter(console_formatter)
 
 book_keeper.addHandler(write_2_console)
@@ -97,6 +97,7 @@ INPUT_HARDWARE = 2
 
 
 def make_mouse_input(data, flags, x, y):
+    x, y = int(x), int(y)
     return tagINPUT(INPUT_MOUSE, Union_tagINPUT(mi=tagMOUSEINPUT(x, y, data, flags, 0, None)))
 
 
@@ -130,7 +131,7 @@ def _left_drag(x, y):
 
 
 def _release_mouse_buttons(x, y):
-    send_input(make_mouse_input(XBUTTON1, 0x0054, x, y))
+    send_input(make_mouse_input(0, 0x8001, x, y))
 
 
 class Commands:
@@ -161,10 +162,23 @@ class MouseController:
     def __command_instructor(self):
         engagement = self.MOUSE_MOVE_SIGNALS.get(self.__current_command.extra)
         engagement(self.__current_command.normalized_x, self.__current_command.normalized_y)
-        while not self.__within_boundary():
+
+        book_keeper.debug('move cursor > {curr_cmd} with extra > {curr_extra}'.format(
+            curr_cmd=(self.__current_command.x, self.__current_command.y),
+            curr_extra=engagement.__name__))
+
+        in_boundary, curr_pos, distance = self.__within_boundary()
+        while not in_boundary:
             self.__breakout_record += 1
             book_keeper.debug("cursor did not moved as expected!")
+            book_keeper.debug(
+                "actual pos > {actual_pos} vs expected pos > {expected_pos} distance: {_distance:.2f}".format(
+                    actual_pos=curr_pos, expected_pos=(self.__current_command.x, self.__current_command.y),
+                    _distance=distance))
+            book_keeper.debug(
+                'retry > {tried}/{limit}'.format(tried=self.__breakout_record, limit=self.__breakout_tolerance))
             engagement(self.__current_command.normalized_x, self.__current_command.normalized_y)
+
             if self.__breakout_record > self.__breakout_tolerance:
                 return
         self.__commands_completed += 1
@@ -184,18 +198,20 @@ class MouseController:
         distance = self.__distance(*current_cursor, self.__current_command.x, self.__current_command.y)
         in_continue_zone = distance < self.__continue_zone
 
-        book_keeper.debug("actual pos > {actual_pos} vs expected pos > {expected_pos} distance: {_distance:.2f}".format(
-            actual_pos=current_cursor, expected_pos=(self.__current_command.x, self.__current_command.y),
-            _distance=distance))
-        if not in_continue_zone:
-            book_keeper.info(
-                "recorded one breakout: actual pos > {actual_pos} vs expected pos > {expected_pos} distance: {_distance:.2f}".format(
-                    actual_pos=current_cursor, expected_pos=(self.__current_command.x, self.__current_command.y),
-                    _distance=distance))
+        return in_continue_zone, current_cursor, distance
 
-        return in_continue_zone
+    def __call__(self, cmd, *cmds):
+        if cmds:
+            _ = list(cmds)
+            _.insert(0, cmd)
+            commands = _
+        else:
+            try:
+                commands = list(cmd)
+            except TypeError:
+                commands = list((cmd,))
+        commands.append(Commands(*self.__current_cursor(), extra='free'))  # release all button after all
 
-    def __call__(self, commands):
         for cmd in commands:
             if self.__breakout_record > self.__breakout_tolerance:
                 book_keeper.warning("Halt! User interrupts for too many times!")
@@ -206,6 +222,5 @@ class MouseController:
             # maybe need to free all buttons here.
 
             time.sleep(self.__current_command.delay)
-        _release_mouse_buttons(*self.__current_cursor())
         book_keeper.info(
             "Successfully Complete {commands_group} Commands!".format(commands_group=self.__commands_completed))

@@ -9,7 +9,7 @@ import time
 
 from win_api import __user32lib
 
-from mouse_event_api import Commands, MouseController
+from mouse_event_api import Commands, MouseController, normalize_coord
 
 SCREEN_CENTER = __user32lib.GetSystemMetrics(0) / 2, __user32lib.GetSystemMetrics(1) / 2
 
@@ -34,3 +34,8 @@ def test_draging_cursor():
     mc = MouseController()
     time.sleep(3)
     mc(circle_cmds_group)
+
+
+def test_release_buttons():
+    from mouse_event_api import _release_mouse_buttons
+    _release_mouse_buttons(*normalize_coord(*SCREEN_CENTER))

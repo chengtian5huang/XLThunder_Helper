@@ -49,6 +49,8 @@ def __window_rect(hnd):
 
 
 def pull_2_surface(hnd):
-    top, right, bottom, left = __window_rect(hnd)
-    wnd_width, wnd_height = right - left, bottom - top
-    __user32lib.SetWindowPos(hnd, 0, 0, 0, 0, 0, 0x0443)
+    return __user32lib.SetWindowPos(hnd, -1, 0, 0, 0, 0, 0x0443)
+
+
+def sink_2_bottom(hnd):
+    return __user32lib.SetWindowPos(hnd, 1, 0, 0, 0, 0, 0x0443)

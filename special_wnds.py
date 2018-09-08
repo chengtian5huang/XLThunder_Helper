@@ -15,7 +15,7 @@ class SpeedMeter:
 
 
 class KickedWarning:
-    classname: str = "XLUEModelHostWnd"
+    classname: str = "XLUEModalHostWnd"
     title: str = "MessageBox"
     click_pos: tuple = (360, 180)
 
@@ -28,4 +28,4 @@ class MainWindow:
 class LoginWindow:
     classname: str = "XLUEFrameHostWnd"
     title: str = "登录迅雷U享版"
-    click_pos: tuple = (800, 300)
+    click_pos: tuple = (800, 385)
