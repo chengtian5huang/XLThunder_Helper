@@ -53,4 +53,4 @@ def pull_2_surface(hnd):
 
 
 def sink_2_bottom(hnd):
-    return __user32lib.SetWindowPos(hnd, 1, 0, 0, 0, 0, 0x0443)
+    return __user32lib.CloseWindow(hnd)
