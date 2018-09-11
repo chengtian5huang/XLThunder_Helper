@@ -42,10 +42,13 @@ def cursor_by_client(hnd, x, y):
     return apoint.x, apoint.y
 
 
-def __window_rect(hnd):
+def _window_rect(hnd):
     tmp_rect = RECT()
     __user32lib.GetWindowRect(hnd, ctypes.byref(tmp_rect))
     return tmp_rect.top, tmp_rect.right, tmp_rect.bottom, tmp_rect.left
+
+
+get_window_rect = _window_rect
 
 
 def pull_2_surface(hnd):
