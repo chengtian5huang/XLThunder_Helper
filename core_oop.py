@@ -4,7 +4,9 @@ Created on 2018/9/3
 
 Creator: cts
 """
+import argparse
 import logging
+import textwrap
 import time
 
 from mouse_event_api import MouseController
@@ -27,7 +29,7 @@ class XLHelper:
     def _log_conf(self):
         core_log = logging.getLogger(self.__class__.__name__)
         core_log.setLevel(logging.DEBUG)
-        console_formatter = logging.Formatter('%(asctime)s||%(name)s > %(levelname)s @LineNo.%(lineno)s|| %(message)s',
+        console_formatter = logging.Formatter('%(asctime)s||%(levelname)s||%(name)s@LineNo.%(lineno)s|| %(message)s',
                                               datefmt='%H:%M:%S')
 
         console_log = logging.StreamHandler()
@@ -106,6 +108,40 @@ class XLHelper:
                 self._idle_process()
 
 
+def _cli_dispatch(args):
+    try:
+        if args.verbose:
+            _ = XLHelper(verbose=True)
+            _.start()
+        else:
+            _ = XLHelper(verbose=False)
+            _.start()
+    except KeyboardInterrupt:
+        s = 'Run Time: {duration}\nSaved: {kicked_count}'.format(
+            duration=time.strftime('%H:%M:%S', time.gmtime(time.time() - _._start_time)),
+            kicked_count=_._kicked_count)
+        print(banner)
+        print(s)
+
+
+ver = 1.0
+banner = '''\
+═╗ ╦┬ ┬┌┐┌╦  ┌─┐┬  ╔═╗┬ ┬┌─┐┬─┐┌┬┐
+╔╩╦╝│ ││││║  ├┤ │  ║ ╦│ │├─┤├┬┘ ││
+╩ ╚═└─┘┘└┘╩═╝└─┘┴  ╚═╝└─┘┴ ┴┴└──┴┘
+'''
+
 if __name__ == '__main__':
-    _ = XLHelper(verbose=False)
-    _.start()
+    dispatch = argparse.ArgumentParser(prog='XunLeiHelper', formatter_class=argparse.RawDescriptionHelpFormatter,
+                                       description=textwrap.dedent(banner),
+                                       epilog=textwrap.dedent(banner))
+    dispatch.add_argument('-V', '--version', action='version', version='%(prog)s {ver_num}'.format(ver_num=ver))
+    dispatch.add_argument('-v', '--verbose', action='count', help='show debug information.')
+    args = dispatch.parse_args()
+
+    _cli_dispatch(args)
+    """
+    if __name__ == '__main__':
+        _ = XLHelper(verbose=False)
+        _.start()
+    """
